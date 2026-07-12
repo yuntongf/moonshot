@@ -1,0 +1,9 @@
+node_modules/
+dist/
+target/
+.env
+.wrangler/
+.DS_Store
+.firecrawl/
+README.md
+docs/

@@ -1,0 +1,20 @@
+@import "tailwindcss";
+:root { font-family: Inter, ui-sans-serif, system-ui; color: #16281e; background: #f5f6ed; }
+* { box-sizing: border-box; } body { margin: 0; } main { max-width: 960px; margin: auto; padding: 4rem 1.5rem; } header { max-width: 650px; margin-bottom: 2.5rem; } h1 { font-size: clamp(2.5rem, 7vw, 4.8rem); letter-spacing: -.06em; line-height: .95; margin: .4rem 0 1rem; } h2 { margin-top: 0; } .eyebrow, .stage { color: #207353; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; font-size: .75rem; } .card { background: #fff; border: 1px solid #d9dfd1; border-radius: 16px; padding: 1.25rem; box-shadow: 0 8px 25px #1b332011; } form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem; align-items: end; } label { display: grid; gap: .35rem; font-weight: 600; } input { border: 1px solid #b5c4b2; border-radius: 8px; padding: .65rem; font: inherit; } button { background: #176b4a; color: white; border: 0; border-radius: 8px; padding: .72rem 1rem; font: inherit; font-weight: 700; cursor: pointer; } .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; } .next { color: #607267; font-size: .9rem; } @media (max-width: 650px) { form { grid-template-columns: 1fr; } }
+
+.field {
+  display: grid;
+  gap: .35rem;
+  align-self: start;
+}
+
+.field-error {
+  margin: 0;
+  color: #b42318;
+  font-size: .8rem;
+  line-height: 1.25;
+}
+
+input[aria-invalid="true"] {
+  border-color: #b42318;
+}

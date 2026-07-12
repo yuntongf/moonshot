@@ -1,0 +1,11 @@
+name = "moonshot-ai"
+main = "src/index.ts"
+compatibility_date = "2025-07-22"
+
+[[d1_databases]]
+binding = "TRACES_DB"
+database_name = "moonshot-ai-traces"
+database_id = "replace-me-before-deploying"
+
+[vars]
+ENVIRONMENT = "local"

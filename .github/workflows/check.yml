@@ -1,0 +1,12 @@
+name: Check
+on: [pull_request, push]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: dtolnay/rust-toolchain@stable
+      - run: bun install
+      - run: bun check
+      - run: cargo check --manifest-path services/api/Cargo.toml

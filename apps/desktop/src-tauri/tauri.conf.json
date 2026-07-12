@@ -1,0 +1,1 @@
+{"productName":"Moonshot","version":"0.1.0","identifier":"com.example.moonshot","build":{"frontendDist":"../dist"},"app":{"windows":[{"title":"Moonshot","width":960,"height":700}],"security":{"csp":null}}}

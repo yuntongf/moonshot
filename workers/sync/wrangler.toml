@@ -1,0 +1,15 @@
+name = "moonshot-sync"
+main = "build/worker/shim.mjs"
+compatibility_date = "2025-07-22"
+[build]
+command = "worker-build --release"
+[[d1_databases]]
+binding = "MOONSHOT_DB"
+database_name = "moonshot-sync"
+database_id = "replace-me-before-deploying"
+[[r2_buckets]]
+binding = "SNAPSHOTS"
+bucket_name = "moonshot-snapshots"
+[[kv_namespaces]]
+binding = "PRESENCE"
+id = "replace-me-before-deploying"
