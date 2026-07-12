@@ -17,4 +17,7 @@ sqlx = { version = "0.8", features = [
   "postgres",
   "uuid",
   "migrate",
+  "time"
 ] }
+time = "0.3.53"
+time-macros = "0.2.31"

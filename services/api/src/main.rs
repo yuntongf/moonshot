@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use axum::{Json, Router, extract::State, http::StatusCode, routing::get};
 use serde::{Deserialize, Serialize};
+// use time::OffsetDateTime;
 use tokio::sync::RwLock;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing::info;
@@ -29,6 +30,15 @@ struct AppState {
     pool: sqlx::postgres::PgPool,
 }
 
+// #[derive(Debug, sqlx::FromRow)]
+// struct OutboxEvent {
+//     id: Uuid,
+//     topic: String,
+//     payload: serde_json::Value,
+//     created_at: OffsetDateTime,
+//     sent_at: Option<OffsetDateTime>,
+// }
+
 #[tokio::main]
 async fn main() -> Result<(), sqlx::Error> {
     tracing_subscriber::fmt()
@@ -48,9 +58,13 @@ async fn main() -> Result<(), sqlx::Error> {
     sqlx::migrate!("./migrations").run(&state.pool).await?;
 
     // Optionally purge the db
-    // sqlx::query("DELETE FROM applications")
-    //     .execute(&state.pool)
-    //     .await?;
+    sqlx::query("DELETE FROM applications")
+        .execute(&state.pool)
+        .await?;
+
+    sqlx::query("DELETE FROM outbox_events")
+        .execute(&state.pool)
+        .await?;
 
     let app = Router::new()
         .route("/health", get(|| async { StatusCode::NO_CONTENT }))
@@ -102,6 +116,12 @@ async fn create_application(
         ));
     }
 
+    // We keep application creation and outbox in one transaction
+    let mut tx = state.pool.begin().await.map_err(|err| {
+        tracing::error!(?err, "failed to init db transaction");
+        (StatusCode::INTERNAL_SERVER_ERROR, "database error")
+    })?;
+
     let application: Application = sqlx::query_as(
         r#"
             INSERT INTO applications (id, company, role, stage)
@@ -112,17 +132,40 @@ async fn create_application(
     .bind(Uuid::new_v4())
     .bind(input.company.trim())
     .bind(input.role.trim())
-    .fetch_one(&state.pool)
+    .fetch_one(&mut *tx)
     .await
     .map_err(|err| {
         tracing::error!(?err, "failed to create application");
-        (StatusCode::INTERNAL_SERVER_ERROR, "database error".into())
+        (StatusCode::INTERNAL_SERVER_ERROR, "database error")
+    })?;
+
+    let payload = serde_json::to_value(&application).map_err(|err| {
+        tracing::error!(?err, "failed to serialize application");
+        (StatusCode::INTERNAL_SERVER_ERROR, "database error")
+    })?;
+
+    sqlx::query(
+        r#"
+        INSERT INTO outbox_events (id, topic, payload)
+        VALUES ($1, $2, $3)
+        RETURNING id, topic, payload, created_at, sent_at
+    "#,
+    )
+    .bind(Uuid::new_v4())
+    .bind(String::from("application.create"))
+    .bind(payload)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(|err| {
+        tracing::error!(?err, "failed to insert to outbox_events");
+        (StatusCode::INTERNAL_SERVER_ERROR, "database error")
+    })?;
+
+    tx.commit().await.map_err(|err| {
+        tracing::error!(?err, "failed to commit db transaction");
+        (StatusCode::INTERNAL_SERVER_ERROR, "database error")
     })?;
 
     state.applications.write().await.push(application.clone());
     Ok((StatusCode::CREATED, Json(application)))
 }
-
-// TODO(moonshot-02): replace AppState with a repository port backed by SQLx.
-// Add a migration that creates applications, then emit an ApplicationCreated
-// Kafka event only after the transaction commits (outbox pattern).
