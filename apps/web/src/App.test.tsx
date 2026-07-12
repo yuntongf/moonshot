@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen, fireEvent } from '@solidjs/testing-library';
 import { applicationSchema } from '@moonshot/contracts';
-import { ApplicationForm } from './App'
+import { ApplicationForm } from './components/ApplicationForm';
 import { QueryClientProvider, QueryClient } from '@tanstack/solid-query';
 
 describe('application contract', () => {

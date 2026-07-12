@@ -58,13 +58,13 @@ async fn main() -> Result<(), sqlx::Error> {
     sqlx::migrate!("./migrations").run(&state.pool).await?;
 
     // Optionally purge the db
-    sqlx::query("DELETE FROM applications")
-        .execute(&state.pool)
-        .await?;
+    // sqlx::query("DELETE FROM applications")
+    //     .execute(&state.pool)
+    //     .await?;
 
-    sqlx::query("DELETE FROM outbox_events")
-        .execute(&state.pool)
-        .await?;
+    // sqlx::query("DELETE FROM outbox_events")
+    //     .execute(&state.pool)
+    //     .await?;
 
     let app = Router::new()
         .route("/health", get(|| async { StatusCode::NO_CONTENT }))
@@ -172,8 +172,6 @@ async fn create_application(
 
 #[cfg(test)]
 mod tests {
-    use std::intrinsics::assert_inhabited;
-
     use super::*;
     use sqlx::PgPool;
 
