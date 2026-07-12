@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::{Json, Router, extract::State, http::StatusCode, routing::get};
 use serde::{Deserialize, Serialize};
-// use time::OffsetDateTime;
+use time::OffsetDateTime;
 use tokio::sync::RwLock;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing::info;
@@ -30,14 +30,14 @@ struct AppState {
     pool: sqlx::postgres::PgPool,
 }
 
-// #[derive(Debug, sqlx::FromRow)]
-// struct OutboxEvent {
-//     id: Uuid,
-//     topic: String,
-//     payload: serde_json::Value,
-//     created_at: OffsetDateTime,
-//     sent_at: Option<OffsetDateTime>,
-// }
+#[derive(Debug, sqlx::FromRow)]
+struct OutboxEvent {
+    id: Uuid,
+    topic: String,
+    payload: serde_json::Value,
+    created_at: OffsetDateTime,
+    sent_at: Option<OffsetDateTime>,
+}
 
 #[tokio::main]
 async fn main() -> Result<(), sqlx::Error> {
@@ -168,4 +168,60 @@ async fn create_application(
 
     state.applications.write().await.push(application.clone());
     Ok((StatusCode::CREATED, Json(application)))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::intrinsics::assert_inhabited;
+
+    use super::*;
+    use sqlx::PgPool;
+
+    #[sqlx::test]
+    async fn creating_an_application_creates_an_outbox_event(pool: PgPool) -> sqlx::Result<()> {
+        let state = AppState {
+            applications: Arc::new(RwLock::new(Vec::new())),
+            pool,
+        };
+
+        let (_, Json(application)) = create_application(
+            State(state.clone()),
+            Json(CreateApplication {
+                company: "Acme".into(),
+                role: "Platform Engineer".into(),
+            }),
+        )
+        .await
+        .expect("valid application should be created");
+
+        let new_app = sqlx::query_as::<_, Application>(
+            r#"
+                SELECT *
+                FROM applications
+            "#,
+        )
+        .fetch_one(&state.pool)
+        .await?;
+
+        assert_eq!(new_app.company, "Acme");
+        assert_eq!(new_app.role, "Platform Engineer");
+        assert_eq!(new_app.stage, "Saved");
+
+        let event = sqlx::query_as::<_, OutboxEvent>(
+            r#"
+            SELECT id, topic, payload, created_at, sent_at
+            FROM outbox_events
+            WHERE payload->>'id' = $1
+            "#,
+        )
+        .bind(String::from(application.id))
+        .fetch_one(&state.pool)
+        .await?;
+
+        assert_eq!(event.topic, "application.create");
+        assert_eq!(event.payload["company"], "Acme");
+        assert!(event.sent_at.is_none());
+
+        Ok(())
+    }
 }
